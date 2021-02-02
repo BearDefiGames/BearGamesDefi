@@ -1,0 +1,18 @@
+{
+    "title": "VIP PAW card Metadata",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string",
+            "description": "VIP Pirate Assault Warriors card"
+        },
+        "description": {
+            "type": "string",
+            "description": "This is a VIP PAW card that is used Bear games"
+        },
+        "image": {
+            "type": "string",
+            "description": "https://i.ibb.co/m6K56t2/default-Vip-Paw-Card-Image.png"
+        }
+    }
+}
