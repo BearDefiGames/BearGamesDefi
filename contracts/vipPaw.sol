@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.7.0;
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
@@ -17,14 +17,16 @@ contract VipPaw is ERC721, Ownable
     uint256 private lastTokenId;
     uint256 public maxSupply;
 
-    uint256 public openCrowdsaleTime;
-    uint256 public closeCrowdsaleTime;
+    bool public isOpenedCrowdsale;
+    bool public isClosedCrowdsaleOwner;
 
     string public defaultTokenURI;
 
     uint256 public maxTokensToBuyInTx = 100;
 
     bool public isOpenTransfers = false;
+
+    address payable defaultAddress;
 
     event TokensPurchased(
         address user,
@@ -38,28 +40,21 @@ contract VipPaw is ERC721, Ownable
         uint256 _tokenPrice,
         uint256 _softCapInTokens,
         uint256 _maxSupply,
-        uint256 _openCrowdsaleTime,
-        uint256 _closeCrowdsaleTime,
-        uint256 _maxTokensToBuyInTx
+        uint256 _maxTokensToBuyInTx,
+        address payable _defaultAddress
     )
-        public
         ERC721(name, symbol)
     {
         require(
             _softCapInTokens <= _maxSupply,
             "VipPaw: Wrong soft cap"
         );
-        require(
-            _openCrowdsaleTime <= _closeCrowdsaleTime,
-            "VipPaw: Wrong open and close time of crowdsale"
-        );
 
         tokenPrice = _tokenPrice;
         softCapInTokens = _softCapInTokens;
         maxSupply = _maxSupply;
-        openCrowdsaleTime = _openCrowdsaleTime;
-        closeCrowdsaleTime = _closeCrowdsaleTime;
         maxTokensToBuyInTx = _maxTokensToBuyInTx;
+        defaultAddress = _defaultAddress;
     }
 
     function setBaseUri(string memory newBaseUri) external onlyOwner
@@ -91,11 +86,37 @@ contract VipPaw is ERC721, Ownable
         isOpenTransfers = true;
     }
 
-    function buyToken(uint256 count) external payable
+    function openCrowdsale() external onlyOwner
+    {
+        require(
+            isOpenedCrowdsale == false,
+            "VipPaw: Crowdsale is already opened"
+        );
+        isOpenedCrowdsale = true;
+    }
+
+    function closeCrowdsale() external onlyOwner
     {
         require(
             isClosedCrowdsale() == false,
-            "VipPaw: Crowdsale is closed"
+            "VipPaw: Crowdsale is already closed"
+        );
+        require(
+            isOpenedCrowdsale == true,
+            "VipPaw: Crowdsale is not opened yet"
+        );
+        isClosedCrowdsaleOwner = true;
+    }
+
+    function buyToken(uint256 count) external payable
+    {
+        require(
+            isOpenedCrowdsale == true,
+            "VipPaw: Crowdsale is not opened yet"
+        );
+        require(
+            isClosedCrowdsale() == false,
+            "VipPaw: Crowdsale is already closed"
         );
         require(
             count <= maxTokensToBuyInTx,
@@ -124,9 +145,12 @@ contract VipPaw is ERC721, Ownable
             lastTokenId = lastTokenId.add(1);
         }
 
-        moneyCollected = moneyCollected.add(rawAmount);
+        uint256 fee = rawAmount.mul(5).div(100);
+        defaultAddress.transfer(fee);
 
-        emit TokensPurchased(sender, count, now);
+        moneyCollected = moneyCollected.add(rawAmount.sub(fee));
+
+        emit TokensPurchased(sender, count, block.timestamp);
     }
 
     function withdraw() external onlyOwner
@@ -188,7 +212,7 @@ contract VipPaw is ERC721, Ownable
             _burn(tokenId);
         }
 
-        amountToRefund = tokenPrice.mul(amountToBurn);
+        amountToRefund = tokenPrice.mul(amountToBurn).mul(95).div(100);
         moneyCollected = moneyCollected.sub(amountToRefund);
 
         sender.transfer(amountToRefund);
@@ -196,9 +220,9 @@ contract VipPaw is ERC721, Ownable
 
     function isClosedCrowdsale() public view returns(bool)
     {
-        if (now < openCrowdsaleTime)
+        if (isOpenedCrowdsale == false)
             return true;
-        else if (now < closeCrowdsaleTime)
+        else if (isClosedCrowdsaleOwner == false)
         {
             if (lastTokenId >= maxSupply)
                 return true;
@@ -211,9 +235,9 @@ contract VipPaw is ERC721, Ownable
 
     function isRefund() public view returns(bool)
     {
-        if (now < openCrowdsaleTime)
+        if (isOpenedCrowdsale == false)
             return false;
-        else if (now < closeCrowdsaleTime)
+        else if (isClosedCrowdsaleOwner == false)
         {
             require(
                 lastTokenId >= maxSupply,

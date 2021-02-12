@@ -4,8 +4,6 @@ require('dotenv').config();
 const {
     TOKEN_PRICE,
     SOFTCAP_IN_TOKENS,
-    OPEN_CROWDSALE_TIME,
-    CLOSE_CROWDSALE_TIME,
     MAX_SUPPLY,
     NAME,
     SYMBOL,
@@ -16,6 +14,7 @@ const {
     MAX_TOKENS_TO_BUY_IN_TX_ETH_MAINNET,
     MAX_TOKENS_TO_BUY_IN_TX_KOVAN,
     MAX_TOKENS_TO_BUY_IN_TX_ROPSTEN,
+    DEFAULT_ADDRESS
 } = process.env;
 
 const VipPaw = artifacts.require("VipPaw");
@@ -55,12 +54,11 @@ module.exports = async function (deployer, network) {
                 VipPaw,
                 NAME,
                 SYMBOL,
-                TOKEN_PRICE,
-                new BN(500),
-                new BN(1000),
-                OPEN_CROWDSALE_TIME,
-                CLOSE_CROWDSALE_TIME,
-                maxTokensToBuyInTx
+                500000000000000,
+                SOFTCAP_IN_TOKENS,
+                MAX_SUPPLY,
+                maxTokensToBuyInTx,
+                DEFAULT_ADDRESS
             );
         }
         else
@@ -72,9 +70,8 @@ module.exports = async function (deployer, network) {
                 TOKEN_PRICE,
                 SOFTCAP_IN_TOKENS,
                 MAX_SUPPLY,
-                OPEN_CROWDSALE_TIME,
-                CLOSE_CROWDSALE_TIME,
-                maxTokensToBuyInTx
+                maxTokensToBuyInTx,
+                DEFAULT_ADDRESS
             );
         }
         let VipPawInst = await VipPaw.deployed();
